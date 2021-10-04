@@ -1,6 +1,10 @@
+from enum import unique
 import requests
 from bs4 import BeautifulSoup
 import re 
+from time import sleep
+
+from requests.sessions import InvalidSchema 
 
 headers = {
     'Access-Control-Allow-Origin': '*',
@@ -30,37 +34,39 @@ def getPages(url):
 
 def getUrls(url):
 
-## (TODO) Implement pagination. (pagina=19) - https://www.imobiliare.ro/vanzare-case-vile/timis?nrcamere=3&pagina=19
-## (TODO) sort it out for houstes as well.
-## Generate the search url starting from https://www.imobiliare.ro/vanzare-apartamente/timis?nrcamere=3 for flats and for houses this url can be used: https://www.imobiliare.ro/vanzare-case-vile/timis?nrcamere=3
+## (TODO) sort it out for houses as well.
+## Generate the search url starting from https://www.imobiliare.ro/vanzare-apartamente/timisoara?nrcamere=3 for flats and for houses this url can be used: https://www.imobiliare.ro/vanzare-case-vile/timis?nrcamere=3
     uniqueUrls =  set()
+
+    pages = int(getPages(url=url))
     
-    #pages = int(getPages(url=url))
 
-    # pages = 3
-    # for page in range(1,pages + 1):
-    #     if page == 1:
-    #         houseUrls = requests.get(url, headers)
-    #         soup = BeautifulSoup(houseUrls.content, 'html.parser')
-    #         print(houseUrls.status_code)
+    for page in range(1,pages + 1):
+        if pages % 5 == 0: 
+            sleep(1)
 
-    #     else:
-    #         paginated_url= f"{url}&pagina={page}"
-    #         houseUrls = requests.get(paginated_url, headers)
-    #         soup = BeautifulSoup(houseUrls.content, 'html.parser')
-    #         print(houseUrls.status_code)
+        if page == 1:
+            houseUrls = requests.get(url, headers)
+            soup = BeautifulSoup(houseUrls.content, 'html.parser')
+            sleep(0.2)            
+
+        else:
+            paginated_url= f'{url}&pagina={page}'
+            houseUrls = requests.get(paginated_url, headers)
+            soup = BeautifulSoup(houseUrls.content, 'html.parser')
+            sleep(0.2)  
+
+        urls = soup.find_all('a', { "data-url-params" : re.compile('lista=.*')})
+        for uri in urls: 
+            uniqueUrls.add(uri['href'])
 
 
-    houseUrls = requests.get(url, headers)
-    soup = BeautifulSoup(houseUrls.content, 'html.parser')
-    urls = soup.find_all('a', { "data-url-params" : re.compile('lista=.*')})
-    for url in urls: 
-        uniqueUrls.add(url['href'])
+    for urls in uniqueUrls: 
+        try:
+            getHomeDetails(urls)
+        except InvalidSchema:
+            continue 
 
-    for url in uniqueUrls: 
-        getHomeDetails(url)
-    
-    # print(int(getPages(url)))
 
 def getHomeDetails(url):
     req = requests.get(url, headers)
@@ -157,4 +163,5 @@ print("url; Nr Camere; Suprafata Utila; Compartimentare; Etaj; Nr Bai; Nr Bucata
 # getHomeDetails("https://www.imobiliare.ro/vanzare-apartamente/timisoara/bucovina/apartament-de-vanzare-3-camere-XAII0000N?lista=8770933&listing=1&sla=lista&imoidviz=3191942853")
 
 
-getUrls("https://www.imobiliare.ro/vanzare-apartamente/timis?nrcamere=3")
+#getUrls("https://www.imobiliare.ro/vanzare-apartamente/timis?nrcamere=3")
+getUrls("https://www.imobiliare.ro/vanzare-apartamente/timisoara?nrcamere=3")
